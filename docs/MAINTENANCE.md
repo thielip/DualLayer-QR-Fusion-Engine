@@ -54,26 +54,23 @@ QR_ACCESS_PASSWORD = "你的自訂密碼"
 1. 程式已推到 **公開** GitHub 倉庫  
 2. 用同一個 GitHub 帳號登入 [https://share.streamlit.io](https://share.streamlit.io)（或 [https://streamlit.io/cloud](https://streamlit.io/cloud)）
 
-### 3.2 部署步驟（約 3 分鐘）
+### 3.2 部署步驟（約 3 分鐘）— 新手必看
 
-1. 開啟 Streamlit Cloud → **New app**
-2. Repository：選 `thielip/DualLayer-QR-Fusion-Engine`
-3. Branch：`main`
-4. Main file path：`app_ui.py`
-5. 按 **Deploy**
+> **重要：** 日誌若出現 `Python 3.13` / `3.14`，App 常會一直「Oh no」。  
+> Streamlit **不能**靠檔案改 Python 版本；已上線的 App 也**不能直接改**，必須刪掉後重新 Deploy，並在進階設定選 **3.11**。
 
-或直接開啟一鍵連結（需已登入 Streamlit Cloud）：
+1. 開啟 https://share.streamlit.io/ 並用 GitHub 登入  
+2. 若已有失敗的 App：點右邊 **⋯** → **Delete**（刪除）  
+3. 開啟：
 
 https://share.streamlit.io/deploy?repository=thielip/DualLayer-QR-Fusion-Engine&branch=main&mainModule=app_ui.py
-6. （可選）App settings → Secrets 貼上：
 
-```toml
-QR_ACCESS_PASSWORD = "Dual-Layer Smart QR"
-```
+4. 確認 Repository / Branch=`main` / Main file=`app_ui.py`  
+5. 點 **Advanced settings**（進階設定）  
+6. **Python version** 選 **3.11**（不要選 3.13 / 3.14）→ **Save**  
+7. 點 **Deploy**，等 2～5 分鐘  
 
-部署完成後會得到類似：
-
-`https://<app-name>.streamlit.app`
+示範密碼：`Dual-Layer Smart QR`
 
 ### 3.3 免費方案限制（需知）
 
