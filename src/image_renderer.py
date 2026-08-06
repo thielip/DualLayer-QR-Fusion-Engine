@@ -5,11 +5,11 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
-import cv2
 import numpy as np
 from PIL import Image
 
 from config import RenderConfig
+from imgops import resize
 
 logger = logging.getLogger(__name__)
 
@@ -94,7 +94,7 @@ class ImageRenderEngine:
             pixel_scale = max(1, (target + padded.shape[0] - 1) // padded.shape[0])
             result = self.upscale_matrix(padded, pixel_scale)
             if result.shape[0] != target or result.shape[1] != target:
-                result = cv2.resize(result, (target, target), interpolation=cv2.INTER_NEAREST)
+                result = resize(result, (target, target), nearest=True)
             return result
 
         size_mm = physical_size_mm if physical_size_mm is not None else self._config.physical_size_mm

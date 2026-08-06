@@ -8,8 +8,10 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
-import cv2
 import numpy as np
+from PIL import Image
+from pyzbar.pyzbar import ZBarSymbol
+from pyzbar.pyzbar import decode as zbar_decode
 
 from config import (
     FUSION_MODE,
@@ -24,6 +26,7 @@ from config import (
 )
 from dual_info_qr import recover_far_matrix_from_dual, recover_near_matrix_from_dual
 from image_renderer import ImageRenderEngine
+from imgops import gaussian_blur, threshold_binary, threshold_otsu
 from simulation import SimulationEngine
 
 logger = logging.getLogger(__name__)
@@ -60,39 +63,42 @@ class ValidationReport:
 
 
 class QRDecoder:
-    """Decode QR payloads from grayscale or RGB images using OpenCV."""
-
-    def __init__(self) -> None:
-        """Initialize OpenCV QR detector."""
-        self._detector = cv2.QRCodeDetector()
-
-    def _to_bgr(self, image: np.ndarray) -> np.ndarray:
-        """Convert an input image to BGR for OpenCV QR detection."""
-        if image.ndim == 2:
-            return cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
-        return image
+    """Decode QR payloads from grayscale or RGB images using pyzbar."""
 
     def decode_multi(self, image: np.ndarray) -> list[str]:
         """Decode all QR codes detected in an image."""
-        working = self._to_bgr(image)
+        if image.ndim == 2:
+            pil = Image.fromarray(image)
+        else:
+            pil = Image.fromarray(image)
         try:
-            ok, decoded_info, _, _ = self._detector.detectAndDecodeMulti(working)
-        except cv2.error:
-            data, _, _ = self._detector.detectAndDecode(working)
-            return [data] if data else []
-        if not ok or decoded_info is None:
-            data, _, _ = self._detector.detectAndDecode(working)
-            return [data] if data else []
-        return [item for item in decoded_info if item]
+            results = zbar_decode(pil, symbols=[ZBarSymbol.QRCODE])
+        except Exception:
+            logger.exception("pyzbar decode failed")
+            return []
+        payloads: list[str] = []
+        for item in results:
+            try:
+                text = item.data.decode("utf-8")
+            except UnicodeDecodeError:
+                text = item.data.decode("latin-1", errors="ignore")
+            if text:
+                payloads.append(text)
+        return payloads
 
     def _preprocess_variants(
         self,
         image: np.ndarray,
         profile: DistanceProfile | None = None,
     ) -> list[np.ndarray]:
-        """Generate binarized views suited for near or far decode attempts."""
+        """Generate binarized / blurred views suited for near or far decode attempts."""
         variants: list[np.ndarray] = [image]
+        working = image if image.ndim == 2 else image[:, :, 0]
+
         if profile == DistanceProfile.FAR:
+            # Optical far scan averages modules → blur washes out the near centroid (ω).
+            for kernel in (5, 7, 9, 11):
+                variants.append(gaussian_blur(working, kernel, sigma=kernel / 3.0))
             thresholds = [FAR_BINARIZE_THRESHOLD, 180, 160, 128]
         elif profile == DistanceProfile.NEAR:
             thresholds = [NEAR_BINARIZE_THRESHOLD, 72, 96, 120]
@@ -100,11 +106,12 @@ class QRDecoder:
             thresholds = [128]
 
         for threshold in thresholds:
-            _, binary = cv2.threshold(image, threshold, 255, cv2.THRESH_BINARY)
-            variants.append(binary)
+            variants.append(threshold_binary(working, threshold))
+            if profile == DistanceProfile.FAR:
+                blurred = gaussian_blur(working, 7, sigma=2.5)
+                variants.append(threshold_binary(blurred, threshold))
 
-        _, otsu = cv2.threshold(image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-        variants.append(otsu)
+        variants.append(threshold_otsu(working))
         return variants
 
     def decode_with_retries(
@@ -124,10 +131,10 @@ class QRDecoder:
 
 
 class LayerRecoveryEngine:
-    """Upscale recovered QR module matrices for OpenCV decoding."""
+    """Upscale recovered QR module matrices for barcode decoding."""
 
     def matrix_to_decode_image(self, matrix: np.ndarray, module_scale: int = 12) -> np.ndarray:
-        """Upscale a binary QR matrix for OpenCV detection."""
+        """Upscale a binary QR matrix for detector-friendly decoding."""
         quiet = np.full((4, matrix.shape[1]), MAX_GRAY_VALUE, dtype=np.uint8)
         bordered = np.vstack([quiet, matrix, quiet])
         quiet_rows = np.full((bordered.shape[0], 4), MAX_GRAY_VALUE, dtype=np.uint8)

@@ -57,8 +57,8 @@ def _hidden_imports() -> list[str]:
         "altair",
         "pandas",
         "numpy",
-        "cv2",
         "PIL",
+        "pyzbar",
         "qrcode",
         "qrcode.image",
         "qrcode.image.pil",
@@ -73,7 +73,7 @@ def _hidden_imports() -> list[str]:
 
 
 def _collect_all() -> list[str]:
-    modules = ["streamlit", "altair", "cv2", "PIL", "qrcode"]
+    modules = ["streamlit", "altair", "PIL", "qrcode", "pyzbar"]
     args: list[str] = []
     for name in modules:
         args.extend(["--collect-all", name])

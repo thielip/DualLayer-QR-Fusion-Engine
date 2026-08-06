@@ -6,7 +6,6 @@ import logging
 from dataclasses import dataclass
 from pathlib import Path
 
-import cv2
 import numpy as np
 
 from config import (
@@ -23,6 +22,7 @@ from config import (
     SimulationConfig,
 )
 from image_renderer import ImageRenderEngine
+from imgops import convert_scale, gaussian_blur, resize
 
 logger = logging.getLogger(__name__)
 
@@ -74,7 +74,7 @@ class SimulationEngine:
         resolved_sigma = sigma if sigma is not None else self._config.gaussian_sigma
         if resolved_sigma is None:
             resolved_sigma = kernel_size / 3.0
-        return cv2.GaussianBlur(image, (kernel_size, kernel_size), resolved_sigma)
+        return gaussian_blur(image, kernel_size, float(resolved_sigma))
 
     def apply_resolution_loss(self, image: np.ndarray, factor: float) -> np.ndarray:
         """Downscale and upscale to emulate limited resolving power."""
@@ -83,16 +83,14 @@ class SimulationEngine:
         height, width = image.shape[:2]
         small_w = max(1, int(width * factor))
         small_h = max(1, int(height * factor))
-        reduced = cv2.resize(image, (small_w, small_h), interpolation=cv2.INTER_AREA)
-        restored = cv2.resize(reduced, (width, height), interpolation=cv2.INTER_LINEAR)
-        return restored
+        reduced = resize(image, (small_w, small_h), nearest=False)
+        return resize(reduced, (width, height), nearest=False)
 
     def apply_print_distortion(self, image: np.ndarray) -> np.ndarray:
         """Add mild print noise and slight gamma drift."""
         noisy = image.astype(np.float32)
         noise = np.random.default_rng(0).normal(0.0, PRINT_NOISE_STD, size=image.shape)
-        distorted = np.clip(noisy + noise, 0, 255).astype(np.uint8)
-        return distorted
+        return np.clip(noisy + noise, 0, 255).astype(np.uint8)
 
     def apply_scanner_distortion(self, image: np.ndarray, profile: DistanceProfile | None = None) -> np.ndarray:
         """Apply contrast/brightness shifts typical of CMOS scanners."""
@@ -102,7 +100,7 @@ class SimulationEngine:
         else:
             alpha = SCANNER_CONTRAST_ALPHA
             beta = SCANNER_BRIGHTNESS_BETA
-        return cv2.convertScaleAbs(image, alpha=alpha, beta=beta)
+        return convert_scale(image, alpha=alpha, beta=beta)
 
     def simulate(
         self,

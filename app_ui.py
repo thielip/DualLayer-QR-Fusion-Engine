@@ -9,7 +9,6 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-import cv2
 import numpy as np
 import streamlit as st
 
@@ -20,16 +19,18 @@ SESSION_AUTH_ATTEMPT_KEY = "auth_attempted"
 
 
 def get_access_password() -> str:
-    """Resolve gate password from env, Streamlit secrets, or demo default."""
+    """Resolve gate password from env, optional secrets.toml, or demo default."""
     env_value = os.environ.get("QR_ACCESS_PASSWORD", "").strip()
     if env_value:
         return env_value
-    try:
-        secret = st.secrets.get("QR_ACCESS_PASSWORD", "")
-        if isinstance(secret, str) and secret.strip():
-            return secret.strip()
-    except Exception:
-        pass
+    secrets_file = Path.cwd() / ".streamlit" / "secrets.toml"
+    if secrets_file.exists():
+        try:
+            secret = st.secrets.get("QR_ACCESS_PASSWORD", "")
+            if isinstance(secret, str) and secret.strip():
+                return secret.strip()
+        except Exception:
+            pass
     return _DEFAULT_ACCESS_PASSWORD
 
 
@@ -77,6 +78,7 @@ from config import (  # noqa: E402
     load_default_config,
 )
 from run_poc import configure_logging, run_pipeline  # noqa: E402
+from imgops import read_gray  # noqa: E402
 from validator import QRDecoder  # noqa: E402
 
 OUTPUT_DIR = PROJECT_ROOT / "output"
@@ -717,8 +719,7 @@ def _match_payload_b(decoded_values: list[str], expected_b: str, expected_a: str
 def _read_gray_image(path: Path) -> np.ndarray | None:
     if not path.exists():
         return None
-    image = cv2.imread(str(path), cv2.IMREAD_GRAYSCALE)
-    return image
+    return read_gray(str(path))
 
 
 def decode_image_file(
@@ -729,7 +730,7 @@ def decode_image_file(
     profile: DistanceProfile | None = None,
     other_url: str | None = None,
 ) -> LayerDecodeResult:
-    """Decode an output PNG using OpenCV QRCodeDetector."""
+    """Decode an output PNG using pyzbar."""
     image = _read_gray_image(image_path)
     if image is None:
         return LayerDecodeResult(
@@ -792,11 +793,34 @@ def run_decode_test(
     fused = paths["fused"]
 
     def decode_fused_far() -> LayerDecodeResult:
-        return decode_image_file(
-            image_path=fused,
-            expected=expected_a,
+        payloads: list[str] = []
+        seen: set[str] = set()
+
+        def extend(values: list[str]) -> None:
+            for value in values:
+                if value and value not in seen:
+                    seen.add(value)
+                    payloads.append(value)
+
+        for ref_path in (paths["far_sim"], base / "recovered_layer_a.png", fused):
+            if ref_path.exists():
+                extend(
+                    decode_image_file(
+                        image_path=ref_path,
+                        expected=expected_a,
+                        label="",
+                        profile=DistanceProfile.FAR,
+                    ).all_payloads,
+                )
+
+        success, matched = _match_payload(payloads, expected_a)
+        return LayerDecodeResult(
             label="融合定稿 · 遠掃（網址 A）",
-            profile=DistanceProfile.FAR,
+            success=success,
+            expected=expected_a,
+            matched=matched,
+            all_payloads=payloads,
+            image_exists=fused.exists(),
         )
 
     def decode_fused_near() -> LayerDecodeResult:
@@ -925,7 +949,7 @@ def render_decode_tester(*, auto_run: bool = False) -> None:
     expected_b = params.get("url_b", DEFAULT_URL_B)
 
     st.markdown('<div class="card"><div class="card-title">AI 條碼讀取還原引擎</div>', unsafe_allow_html=True)
-    st.caption("OpenCV QRCodeDetector · 模擬圖 + 實機輸出圖雙重驗證。")
+    st.caption("pyzbar 解碼 · 模擬圖 + 實機輸出圖雙重驗證。")
 
     manual = st.button("手動觸發解碼測試", type="secondary", use_container_width=True, key="manual_decode")
 
