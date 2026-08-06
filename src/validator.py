@@ -9,9 +9,8 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
+import zxingcpp
 from PIL import Image
-from pyzbar.pyzbar import ZBarSymbol
-from pyzbar.pyzbar import decode as zbar_decode
 
 from config import (
     FUSION_MODE,
@@ -63,25 +62,22 @@ class ValidationReport:
 
 
 class QRDecoder:
-    """Decode QR payloads from grayscale or RGB images using pyzbar."""
+    """Decode QR payloads from grayscale or RGB images using zxing-cpp."""
 
     def decode_multi(self, image: np.ndarray) -> list[str]:
         """Decode all QR codes detected in an image."""
-        if image.ndim == 2:
-            pil = Image.fromarray(image)
-        else:
-            pil = Image.fromarray(image)
         try:
-            results = zbar_decode(pil, symbols=[ZBarSymbol.QRCODE])
+            barcodes = zxingcpp.read_barcodes(image)
         except Exception:
-            logger.exception("pyzbar decode failed")
-            return []
-        payloads: list[str] = []
-        for item in results:
             try:
-                text = item.data.decode("utf-8")
-            except UnicodeDecodeError:
-                text = item.data.decode("latin-1", errors="ignore")
+                pil = Image.fromarray(image)
+                barcodes = zxingcpp.read_barcodes(pil)
+            except Exception:
+                logger.exception("zxing-cpp decode failed")
+                return []
+        payloads: list[str] = []
+        for item in barcodes:
+            text = (item.text or "").strip()
             if text:
                 payloads.append(text)
         return payloads

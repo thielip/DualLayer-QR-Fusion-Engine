@@ -2,84 +2,102 @@
 
 from __future__ import annotations
 
-import json
-import logging
-import os
-import sys
-from dataclasses import dataclass
-from pathlib import Path
-
-import numpy as np
 import streamlit as st
 
-# Demo gate only — not real security. Override via QR_ACCESS_PASSWORD / Streamlit secrets.
-_DEFAULT_ACCESS_PASSWORD = "Dual-Layer Smart QR"
-SESSION_AUTH_KEY = "auth_unlocked"
-SESSION_AUTH_ATTEMPT_KEY = "auth_attempted"
-
-
-def get_access_password() -> str:
-    """Resolve gate password from env, optional secrets.toml, or demo default."""
-    env_value = os.environ.get("QR_ACCESS_PASSWORD", "").strip()
-    if env_value:
-        return env_value
-    secrets_file = Path.cwd() / ".streamlit" / "secrets.toml"
-    if secrets_file.exists():
-        try:
-            secret = st.secrets.get("QR_ACCESS_PASSWORD", "")
-            if isinstance(secret, str) and secret.strip():
-                return secret.strip()
-        except Exception:
-            pass
-    return _DEFAULT_ACCESS_PASSWORD
-
-
-def _is_frozen() -> bool:
-    return getattr(sys, "frozen", False)
-
-
-def get_bundle_root() -> Path:
-    """Return the directory that contains bundled source assets."""
-    if _is_frozen():
-        return Path(sys._MEIPASS)
-    return Path(__file__).resolve().parent
-
-
-def get_project_root() -> Path:
-    """Return the writable working directory (next to .exe when frozen)."""
-    if _is_frozen():
-        return Path(sys.executable).parent
-    return Path(__file__).resolve().parent
-
-
-BUNDLE_ROOT = get_bundle_root()
-PROJECT_ROOT = get_project_root()
-SRC_DIR = BUNDLE_ROOT / "src"
-if str(SRC_DIR) not in sys.path:
-    sys.path.insert(0, str(SRC_DIR))
-if str(BUNDLE_ROOT) not in sys.path:
-    sys.path.insert(1, str(BUNDLE_ROOT))
-
-from config import (  # noqa: E402
-    ALLOWED_DPI_VALUES,
-    AppConfig,
-    DEFAULT_CENTROID_SIZE,
-    DEFAULT_DPI,
-    DEFAULT_FINAL_SIZE,
-    DEFAULT_MODULE_BLOCK_SIZE,
-    DEFAULT_PHYSICAL_SIZE_MM,
-    DistanceProfile,
-    FINAL_SIZE_STEP,
-    MAX_FINAL_SIZE,
-    MIN_FINAL_SIZE,
-    OUTPUT_PRESET_MANUAL,
-    OUTPUT_PRESETS,
-    apply_output_preset,
-    load_default_config,
+# Must run before other Streamlit calls so Cloud can show real errors on-page.
+st.set_page_config(
+    page_title="Dual-Layer QR Fusion Engine",
+    page_icon="🔲",
+    layout="wide",
+    initial_sidebar_state="expanded",
 )
-from run_poc import configure_logging, run_pipeline  # noqa: E402
-from imgops import read_gray  # noqa: E402
-from validator import QRDecoder  # noqa: E402
+
+_BOOT_ERROR: BaseException | None = None
+
+try:
+    import json
+    import logging
+    import os
+    import sys
+    from dataclasses import dataclass
+    from pathlib import Path
+
+    import numpy as np
+
+    # Demo gate only — not real security. Override via QR_ACCESS_PASSWORD.
+    _DEFAULT_ACCESS_PASSWORD = "Dual-Layer Smart QR"
+    SESSION_AUTH_KEY = "auth_unlocked"
+    SESSION_AUTH_ATTEMPT_KEY = "auth_attempted"
+
+    def get_access_password() -> str:
+        """Resolve gate password from env, optional secrets.toml, or demo default."""
+        env_value = os.environ.get("QR_ACCESS_PASSWORD", "").strip()
+        if env_value:
+            return env_value
+        secrets_file = Path.cwd() / ".streamlit" / "secrets.toml"
+        if secrets_file.exists():
+            try:
+                secret = st.secrets.get("QR_ACCESS_PASSWORD", "")
+                if isinstance(secret, str) and secret.strip():
+                    return secret.strip()
+            except Exception:
+                pass
+        return _DEFAULT_ACCESS_PASSWORD
+
+    def _is_frozen() -> bool:
+        return getattr(sys, "frozen", False)
+
+    def get_bundle_root() -> Path:
+        """Return the directory that contains bundled source assets."""
+        if _is_frozen():
+            return Path(sys._MEIPASS)
+        return Path(__file__).resolve().parent
+
+    def get_project_root() -> Path:
+        """Return the writable working directory (next to .exe when frozen)."""
+        if _is_frozen():
+            return Path(sys.executable).parent
+        return Path(__file__).resolve().parent
+
+    BUNDLE_ROOT = get_bundle_root()
+    PROJECT_ROOT = get_project_root()
+    SRC_DIR = BUNDLE_ROOT / "src"
+    if str(SRC_DIR) not in sys.path:
+        sys.path.insert(0, str(SRC_DIR))
+    if str(BUNDLE_ROOT) not in sys.path:
+        sys.path.insert(1, str(BUNDLE_ROOT))
+
+    from config import (  # noqa: E402
+        ALLOWED_DPI_VALUES,
+        AppConfig,
+        DEFAULT_CENTROID_SIZE,
+        DEFAULT_DPI,
+        DEFAULT_FINAL_SIZE,
+        DEFAULT_MODULE_BLOCK_SIZE,
+        DEFAULT_PHYSICAL_SIZE_MM,
+        DistanceProfile,
+        FINAL_SIZE_STEP,
+        MAX_FINAL_SIZE,
+        MIN_FINAL_SIZE,
+        OUTPUT_PRESET_MANUAL,
+        OUTPUT_PRESETS,
+        apply_output_preset,
+        load_default_config,
+    )
+    from imgops import read_gray  # noqa: E402
+    from run_poc import configure_logging, run_pipeline  # noqa: E402
+    from validator import QRDecoder  # noqa: E402
+
+except Exception as _boot_exc:  # pragma: no cover - Cloud diagnostics
+    _BOOT_ERROR = _boot_exc
+
+if _BOOT_ERROR is not None:
+    st.error(
+        "程式啟動失敗——這不是你的操作問題，是雲端套件／環境錯誤。"
+        "請把下方紅色英文錯誤整段複製傳給開發者。"
+    )
+    st.exception(_BOOT_ERROR)
+    st.stop()
 
 OUTPUT_DIR = PROJECT_ROOT / "output"
 FUSED_IMAGE = OUTPUT_DIR / "fused_qr.png"
@@ -949,7 +967,7 @@ def render_decode_tester(*, auto_run: bool = False) -> None:
     expected_b = params.get("url_b", DEFAULT_URL_B)
 
     st.markdown('<div class="card"><div class="card-title">AI 條碼讀取還原引擎</div>', unsafe_allow_html=True)
-    st.caption("pyzbar 解碼 · 模擬圖 + 實機輸出圖雙重驗證。")
+    st.caption("zxing 解碼 · 模擬圖 + 實機輸出圖雙重驗證。")
 
     manual = st.button("手動觸發解碼測試", type="secondary", use_container_width=True, key="manual_decode")
 
@@ -1322,13 +1340,6 @@ def render_application() -> None:
 
 def main() -> None:
     """Render the Streamlit application."""
-    st.set_page_config(
-        page_title="Dual-Layer QR Fusion Engine",
-        page_icon="🔲",
-        layout="wide",
-        initial_sidebar_state="expanded",
-    )
-
     configure_logging(verbose=False)
     logging.getLogger().setLevel(logging.WARNING)
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -1343,5 +1354,4 @@ def main() -> None:
     render_application()
 
 
-if __name__ == "__main__":
-    main()
+main()
