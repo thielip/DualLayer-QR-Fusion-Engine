@@ -10,7 +10,7 @@ from run_poc import run_pipeline
 
 def test_ui_decode_user_screenshot_urls() -> None:
     """Far/near output images should decode with the screenshot test URLs."""
-    from app_ui import run_decode_test
+    from app_main import run_decode_test
 
     config = AppConfig()
     config.url_a = "https://www.ppmof.gov.tw/"

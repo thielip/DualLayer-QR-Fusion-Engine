@@ -9,7 +9,6 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
-import zxingcpp
 from PIL import Image
 
 from config import (
@@ -66,6 +65,8 @@ class QRDecoder:
 
     def decode_multi(self, image: np.ndarray) -> list[str]:
         """Decode all QR codes detected in an image."""
+        import zxingcpp
+
         try:
             barcodes = zxingcpp.read_barcodes(image)
         except Exception:

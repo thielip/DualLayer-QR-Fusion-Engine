@@ -34,6 +34,7 @@ def _collect_add_data() -> list[str]:
     sep = _path_sep()
     entries = [
         (ROOT / "app_ui.py", "."),
+        (ROOT / "app_main.py", "."),
         (ROOT / "run_poc.py", "."),
         (ROOT / "launcher.py", "."),
         (ROOT / "src", "src"),
