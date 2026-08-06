@@ -35,6 +35,8 @@ py -m venv .venv
 
 # 安裝依賴
 py -m pip install -r requirements.txt
+# 本機跑測試時再裝：
+# py -m pip install -r requirements-dev.txt
 ```
 
 雲端（Streamlit Community Cloud）使用 `opencv-python-headless`（已寫在 `requirements.txt`），無需本機 GUI／OpenGL。
