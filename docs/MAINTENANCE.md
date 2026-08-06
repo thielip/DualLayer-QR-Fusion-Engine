@@ -20,6 +20,8 @@
 | 近掃 B 失敗 | m／ω 不合、列印模糊、距離不對 | 換 `a4_print`／手動調小 ω；見操作手冊 |
 | Cloud 部署失敗（cv2／requirements） | 依賴或 `packages.txt` 不相容 | 確認根目錄 `requirements.txt` 使用 `opencv-python-headless`；`packages.txt` 僅含 `libgl1`（勿寫註解）；App 設定選 Python **3.11** 後 Reboot |
 | OpenCV 解碼空結果 | 圖太小或對比不足 | 提高 `final_size`／DPI 預設 |
+| Streamlit 輸入看不見字 | 主題衝突 | 確認 `.streamlit/config.toml` 為 dark |
+| 密碼解不開 | secrets／環境變數打錯 | 檢查 `QR_ACCESS_PASSWORD`；預設見 `.env.example` |
 
 ### 示範密碼政策
 
