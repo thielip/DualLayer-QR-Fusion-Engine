@@ -1,0 +1,48 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.venv/
+venv/
+.env
+.env.*
+!.env.example
+
+# Tests / tooling
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Local secrets / serials (demo password file)
+SN.txt
+*.sn
+secrets/
+credentials.*
+
+# Generated artifacts
+output/
+release/
+dist/
+build/
+*.spec
+
+# Packaged binaries
+*.exe
+
+# Streamlit local secrets
+.streamlit/secrets.toml
+
+# OS / editor
+Thumbs.db
+Desktop.ini
+.DS_Store
+*.swp
+.idea/
+.vscode/
+
+# Accidental scratch files
+*.tmp
+py -m streamlit run app_ui.py.txt

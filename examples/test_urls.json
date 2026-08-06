@@ -1,0 +1,5 @@
+{
+  "url_a": "https://example.com/marketing/campaign-2026",
+  "url_b": "https://example.com/verify/token-001",
+  "description": "Sample payloads for dual-layer QR fusion PoC"
+}
