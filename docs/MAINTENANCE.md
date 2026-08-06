@@ -57,10 +57,14 @@ QR_ACCESS_PASSWORD = "你的自訂密碼"
 ### 3.2 部署步驟（約 3 分鐘）
 
 1. 開啟 Streamlit Cloud → **New app**
-2. Repository：選本倉庫（例如 `thielip/2QRcode`）
+2. Repository：選 `thielip/DualLayer-QR-Fusion-Engine`
 3. Branch：`main`
 4. Main file path：`app_ui.py`
 5. 按 **Deploy**
+
+或直接開啟一鍵連結（需已登入 Streamlit Cloud）：
+
+https://share.streamlit.io/deploy?repository=thielip/DualLayer-QR-Fusion-Engine&branch=main&mainModule=app_ui.py
 6. （可選）App settings → Secrets 貼上：
 
 ```toml

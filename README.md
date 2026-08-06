@@ -18,7 +18,17 @@ Windows 也可雙擊 `start.bat`。
 
 ## 線上 Demo（免費）
 
-部署方式見 **[docs/MAINTENANCE.md](docs/MAINTENANCE.md)**（Streamlit Community Cloud，無需付費主機）。
+原始碼：https://github.com/thielip/DualLayer-QR-Fusion-Engine
+
+**一鍵部署到 Streamlit Community Cloud（免費，前後台合一）：**
+
+[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://share.streamlit.io/deploy?repository=thielip/DualLayer-QR-Fusion-Engine&branch=main&mainModule=app_ui.py)
+
+1. 用 **GitHub 帳號 `thielip`** 登入 Streamlit Cloud（與倉庫同一帳號）
+2. 確認 Repository / Branch=`main` / Main file=`app_ui.py` → Deploy  
+3. （可選）Secrets 加上：`QR_ACCESS_PASSWORD = "你的密碼"`
+
+完整說明見 **[docs/MAINTENANCE.md](docs/MAINTENANCE.md)**。
 
 ## 專案結構
 
