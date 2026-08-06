@@ -24,9 +24,10 @@ Windows 也可雙擊 `start.bat`。
 
 [![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://share.streamlit.io/deploy?repository=thielip/DualLayer-QR-Fusion-Engine&branch=main&mainModule=app_ui.py)
 
-1. 用 **GitHub 帳號 `thielip`** 登入 Streamlit Cloud（與倉庫同一帳號）
-2. 確認 Repository / Branch=`main` / Main file=`app_ui.py` → Deploy  
-3. （可選）Secrets 加上：`QR_ACCESS_PASSWORD = "你的密碼"`
+1. 用 **GitHub 帳號 `thielip`** 登入 Streamlit Cloud  
+2. 若舊 App 一直 Oh no：先 **Delete** 再重新 Deploy  
+3. 點 **Advanced settings** → **Python version 選 3.11**（不要用 3.14）→ Save → Deploy  
+4. （可選）Secrets：`QR_ACCESS_PASSWORD = "你的密碼"`
 
 完整說明見 **[docs/MAINTENANCE.md](docs/MAINTENANCE.md)**。
 
